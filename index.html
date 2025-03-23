@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bibek Bhattarai - Rain & Thunder</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0a1929;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        /* Glass effect for the screen to create water streaks */
+        .glass {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                to bottom,
+                rgba(174, 194, 224, 0.05),
+                rgba(174, 194, 224, 0.02)
+            );
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Enhanced droplet with trail for more realism */
+        .raindrop {
+            position: absolute;
+            background: linear-gradient(
+                to bottom,
+                rgba(255, 255, 255, 0.1),
+                rgba(255, 255, 255, 0.7)
+            );
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+            transform-origin: center bottom;
+            opacity: 0;
+            z-index: 2;
+        }
+        
+        /* Water streaks that form when drops hit surface */
+        .streak {
+            position: absolute;
+            background: linear-gradient(
+                to bottom,
+                rgba(174, 194, 224, 0.8),
+                rgba(174, 194, 224, 0)
+            );
+            border-radius: 50% 50% 0 0 / 60% 60% 0 0;
+            transform-origin: center bottom;
+            z-index: 1;
+            opacity: 0;
+        }
+        
+        /* Splash effect when drops hit surface */
+        .splash {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background-color: rgba(174, 194, 224, 0.7);
+            border-radius: 50%;
+            transform: scale(0);
+            z-index: 1;
+            opacity: 0;
+        }
+        
+        /* Water ripple on "surface" - appears at bottom of screen */
+        .ripple {
+            position: absolute;
+            border: 1px solid rgba(174, 194, 224, 0.5);
+            border-radius: 50%;
+            transform: scale(0);
+            opacity: 0;
+            z-index: 1;
+        }
+
+        .lightning {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0);
+            pointer-events: none;
+            z-index: 4;
+        }
+        
+        /* Fog/mist effect to enhance realism */
+        .fog {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                to bottom,
+                rgba(174, 194, 224, 0.02),
+                rgba(174, 194, 224, 0.03),
+                rgba(174, 194, 224, 0.01)
+            );
+            opacity: 0.4;
+            filter: blur(5px);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 10;
+        }
+
+        .btn {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        .start-btn {
+            background-color: rgba(0, 255, 128, 0.4);
+            font-size: 18px;
+            padding: 15px 30px;
+        }
+
+        .title {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 24px;
+            z-index: 10;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .info {
+            position: absolute;
+            top: 60px;
+            left: 20px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            z-index: 10;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        /* Water puddle at the bottom */
+        .water-surface {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 80px;
+            background: linear-gradient(
+                to bottom,
+                rgba(10, 25, 41, 0),
+                rgba(64, 99, 141, 0.2)
+            );
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">Bibek Bhattarai</h1>
+        <p class="info">Relax to the sound of rain and thunder</p>
+        
+        <div class="fog"></div>
+        <div class="glass"></div>
+        <div class="water-surface"></div>
+        <div class="lightning" id="lightning"></div>
+        
+        <!-- Start overlay -->
+        <div class="overlay" id="startOverlay">
+            <button class="btn start-btn" id="startExperience">Start Rain & Thunder</button>
+        </div>
+        
+        <div class="controls">
+            <button class="btn" id="toggleRain">Toggle Rain</button>
+            <button class="btn" id="toggleThunder">Toggle Thunder</button>
+            <button class="btn" id="toggleSound">Mute Sound</button>
+            <button class="btn" id="toggleIntensity">Increase Intensity</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.querySelector('.container');
+            const lightning = document.getElementById('lightning');
+            const toggleRainBtn = document.getElementById('toggleRain');
+            const toggleThunderBtn = document.getElementById('toggleThunder');
+            const toggleSoundBtn = document.getElementById('toggleSound');
+            const toggleIntensityBtn = document.getElementById('toggleIntensity');
+            const startOverlay = document.getElementById('startOverlay');
+            const startExperienceBtn = document.getElementById('startExperience');
+            
+            let rainEnabled = true;
+            let thunderEnabled = true;
+            let soundEnabled = true;
+            let highIntensity = false;
+            let raindrops = [];
+            let thunderTimeout;
+            let initialized = false;
+            let createRaindropsInterval;
+            
+            // Rain audio
+            const rainSound = new Audio();
+            rainSound.src = 'sounds/767864__yulathh__2023-07-01-05.wav'; // Your custom rain sound path
+            rainSound.loop = true;
+            rainSound.volume = 0.5;
+            
+            // Thunder sounds
+            const thunderSounds = [
+                'sounds/noo.mp3', // Your custom thunder sound 1
+                'sounds/noo.mp3', // Your custom thunder sound 2
+                'sounds/noo.mp3', // Your custom thunder sound 3
+                'sounds/noo.mp3'  // Your custom thunder sound 4
+            ];
+            
+            // Weather intensity settings
+            const intensitySettings = {
+                low: {
+                    dropFrequency: 70,      // ms between drops
+                    dropSize: [2, 5],       // min/max size in px
+                    dropSpeed: [0.7, 1.5],  // min/max duration in seconds
+                    streakChance: 0.3,      // chance of creating a streak
+                    splashChance: 0.4       // chance of creating a splash
+                },
+                high: {
+                    dropFrequency: 30,     
+                    dropSize: [2, 8],
+                    dropSpeed: [0.5, 1.2],
+                    streakChance: 0.5,
+                    splashChance: 0.7
+                }
+            };
+            
+            let currentIntensity = intensitySettings.low;
+            
+            // Initialize audio context on user interaction
+            startExperienceBtn.addEventListener('click', function() {
+                startOverlay.classList.add('hidden');
+                initializeExperience();
+            });
+            
+            function initializeExperience() {
+                if (initialized) return;
+                initialized = true;
+                
+                // Start visual effects
+                createRaindropsInterval = setInterval(createRaindrop, currentIntensity.dropFrequency);
+                scheduleLightning();
+                
+                // Start audio
+                if (soundEnabled && rainEnabled) {
+                    rainSound.play().catch(e => console.log('Rain sound still failed to play:', e));
+                }
+                
+                // Create some water streaks on the "glass" for initial effect
+                for (let i = 0; i < 10; i++) {
+                    createRandomStreak();
+                }
+            }
+            
+            // Create realistic raindrop with physics
+            function createRaindrop() {
+                if (!rainEnabled) return;
+                
+                // Create main raindrop element
+                const raindrop = document.createElement('div');
+                raindrop.classList.add('raindrop');
+                
+                // Random position and properties
+                const posX = Math.random() * window.innerWidth;
+                const posY = -20; // Start above viewport
+                const size = Math.random() * (currentIntensity.dropSize[1] - currentIntensity.dropSize[0]) + currentIntensity.dropSize[0];
+                const duration = Math.random() * (currentIntensity.dropSpeed[1] - currentIntensity.dropSpeed[0]) + currentIntensity.dropSpeed[0];
+                const endPosY = window.innerHeight - (Math.random() * 100);
+                
+                // Apply properties
+                raindrop.style.width = `${size}px`;
+                raindrop.style.height = `${size * 3}px`; // Elongated drop shape
+                raindrop.style.left = `${posX}px`;
+                raindrop.style.top = `${posY}px`;
+                
+                // Add to DOM
+                container.appendChild(raindrop);
+                
+                // Animate the raindrop falling
+                let startTime = null;
+                let hasLanded = false;
+                
+                function animateRaindrop(timestamp) {
+                    if (!startTime) startTime = timestamp;
+                    const elapsed = timestamp - startTime;
+                    const progress = Math.min(elapsed / (duration * 1000), 1);
+                    
+                    // Non-linear easing for more realistic physics
+                    const easedProgress = progress * progress; // Quadratic easing
+                    const currentY = posY + (endPosY - posY) * easedProgress;
+                    
+                    // Update position
+                    raindrop.style.top = `${currentY}px`;
+                    
+                    // Gradually increase opacity as drop falls
+                    if (progress < 0.2) {
+                        raindrop.style.opacity = progress / 0.2;
+                    }
+                    
+                    // Create splash when raindrop hits "ground"
+                    if (progress > 0.9 && !hasLanded) {
+                        hasLanded = true;
+                        
+                        // Create splash effect
+                        if (Math.random() < currentIntensity.splashChance) {
+                            createSplash(posX, endPosY);
+                        }
+                        
+                        // Create streak effect
+                        if (Math.random() < currentIntensity.streakChance) {
+                            createStreak(posX, endPosY, size);
+                        }
+                        
+                        // Create ripple effect
+                        if (currentY > window.innerHeight - 100) {
+                            createRipple(posX, currentY);
+                        }
+                        
+                        // Start fade out
+                        raindrop.style.opacity = Math.max(0, 1 - ((progress - 0.9) * 10));
+                    }
+                    
+                    // Continue animation if not complete
+                    if (progress < 1) {
+                        requestAnimationFrame(animateRaindrop);
+                    } else {
+                        raindrop.remove();
+                    }
+                }
+                
+                // Start the animation
+                requestAnimationFrame(animateRaindrop);
+            }
+            
+            // Create random streaks on the glass for ambient effect
+            function createRandomStreak() {
+                const posX = Math.random() * window.innerWidth;
+                const posY = Math.random() * (window.innerHeight * 0.7);
+                createStreak(posX, posY, Math.random() * 3 + 1);
+            }
+            
+            // Create a water streak effect
+            function createStreak(posX, posY, size) {
+                const streak = document.createElement('div');
+                streak.classList.add('streak');
+                
+                // Calculate streak properties
+                const width = size * (Math.random() * 1.5 + 1);
+                const height = size * (Math.random() * 20 + 10);
+                const angle = Math.random() * 10 - 5; // Slight random angle
+                
+                // Set streak style
+                streak.style.width = `${width}px`;
+                streak.style.height = `${height}px`;
+                streak.style.left = `${posX}px`;
+                streak.style.top = `${posY}px`;
+                streak.style.transform = `rotate(${angle}deg)`;
+                
+                // Add to DOM
+                container.appendChild(streak);
+                
+                // Animate the streak
+                let startTime = null;
+                const duration = Math.random() * 5 + 3; // 3-8 seconds
+                
+                function animateStreak(timestamp) {
+                    if (!startTime) startTime = timestamp;
+                    const elapsed = timestamp - startTime;
+                    const progress = Math.min(elapsed / (duration * 1000), 1);
+                    
+                    // Calculate current height based on growth over time
+                    if (progress < 0.3) {
+                        // Appear and grow
+                        streak.style.opacity = progress / 0.3;
+                        streak.style.height = `${height * (0.3 + progress * 0.7)}px`;
+                    } else if (progress > 0.7) {
+                        // Fade out
+                        streak.style.opacity = Math.max(0, 1 - ((progress - 0.7) / 0.3));
+                    }
+                    
+                    // Continue animation if not complete
+                    if (progress < 1) {
+                        requestAnimationFrame(animateStreak);
+                    } else {
+                        streak.remove();
+                    }
+                }
+                
+                // Start the animation
+                requestAnimationFrame(animateStreak);
+            }
+            
+            // Create a splash effect when raindrops hit surface
+            function createSplash(posX, posY) {
+                // Create multiple particles for splash
+                const particleCount = Math.floor(Math.random() * 4 + 3);
+                
+                for (let i = 0; i < particleCount; i++) {
+                    const splash = document.createElement('div');
+                    splash.classList.add('splash');
+                    
+                    const angle = (Math.random() * 120 + 30) * (Math.random() > 0.5 ? 1 : -1); // 30-150 degrees left or right
+                    const distance = Math.random() * 15 + 5; // How far particles travel
+                    const duration = Math.random() * 0.5 + 0.3; // How long animation lasts
+                    
+                    splash.style.left = `${posX}px`;
+                    splash.style.top = `${posY}px`;
+                    
+                    container.appendChild(splash);
+                    
+                    // Animate splash particle
+                    let startTime = null;
+                    
+                    function animateSplash(timestamp) {
+                        if (!startTime) startTime = timestamp;
+                        const elapsed = timestamp - startTime;
+                        const progress = Math.min(elapsed / (duration * 1000), 1);
+                        
+                        // Calculate arc trajectory (up then down)
+                        const verticalProgress = Math.sin(progress * Math.PI);
+                        const horizontalProgress = progress;
+                        
+                        // Calculate position
+                        const radians = angle * (Math.PI / 180);
+                        const xOffset = Math.cos(radians) * distance * horizontalProgress;
+                        const yOffset = -Math.sin(Math.PI * progress) * distance * 0.8; // Arc upward then down
+                        
+                        splash.style.transform = `translate(${xOffset}px, ${yOffset}px) scale(${1 - progress * 0.5})`;
+                        
+                        // Handle opacity
+                        if (progress < 0.2) {
+                            splash.style.opacity = progress / 0.2;
+                        } else {
+                            splash.style.opacity = Math.max(0, 1 - ((progress - 0.2) / 0.8));
+                        }
+                        
+                        // Continue animation if not complete
+                        if (progress < 1) {
+                            requestAnimationFrame(animateSplash);
+                        } else {
+                            splash.remove();
+                        }
+                    }
+                    
+                    // Start the animation
+                    requestAnimationFrame(animateSplash);
+                }
+            }
+            
+            // Create ripple effect in water
+            function createRipple(posX, posY) {
+                const ripple = document.createElement('div');
+                ripple.classList.add('ripple');
+                
+                ripple.style.left = `${posX}px`;
+                ripple.style.top = `${posY}px`;
+                
+                container.appendChild(ripple);
+                
+                // Animate ripple
+                let startTime = null;
+                const duration = 1; // 1 second
+                
+                function animateRipple(timestamp) {
+                    if (!startTime) startTime = timestamp;
+                    const elapsed = timestamp - startTime;
+                    const progress = Math.min(elapsed / (duration * 1000), 1);
+                    
+                    // Grow from center
+                    ripple.style.transform = `translate(-50%, -50%) scale(${progress * 20})`;
+                    
+                    // Fade out over time
+                    ripple.style.opacity = Math.max(0, 0.5 - progress * 0.5);
+                    
+                    // Continue animation if not complete
+                    if (progress < 1) {
+                        requestAnimationFrame(animateRipple);
+                    } else {
+                        ripple.remove();
+                    }
+                }
+                
+                // Start the animation
+                requestAnimationFrame(animateRipple);
+            }
+            
+            // Create lightning effect
+            function createLightning() {
+                if (!thunderEnabled) {
+                    scheduleLightning();
+                    return;
+                }
+                
+                // Flash effect
+                const flashDuration = 100;
+                lightning.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+                
+                setTimeout(() => {
+                    lightning.style.backgroundColor = 'rgba(255, 255, 255, 0)';
+                    
+                    // Sometimes double flash
+                    if (Math.random() > 0.6) {
+                        setTimeout(() => {
+                            lightning.style.backgroundColor = 'rgba(255, 255, 255, 0.4)';
+                            
+                            setTimeout(() => {
+                                lightning.style.backgroundColor = 'rgba(255, 255, 255, 0)';
+                            }, flashDuration / 2);
+                        }, flashDuration);
+                    }
+                }, flashDuration);
+                
+                // Play thunder sound with delay
+                if (soundEnabled && initialized) {
+                    const thunderIndex = Math.floor(Math.random() * thunderSounds.length);
+                    const thunder = new Audio(thunderSounds[thunderIndex]);
+                    
+                    // Delay thunder sound based on "distance"
+                    const delay = Math.random() * 2000 + 500;
+                    setTimeout(() => {
+                        thunder.volume = Math.random() * 0.4 + 0.4;
+                        thunder.play().catch(e => console.log('Thunder sound failed to play:', e));
+                    }, delay);
+                }
+                
+                scheduleLightning();
+            }
+            
+            // Schedule next lightning
+            function scheduleLightning() {
+                clearTimeout(thunderTimeout);
+                // Random time between 5 and 15 seconds
+                const nextLightning = Math.random() * 10000 + 5000;
+                thunderTimeout = setTimeout(createLightning, nextLightning);
+            }
+            
+            // Toggle rain
+            toggleRainBtn.addEventListener('click', function() {
+                rainEnabled = !rainEnabled;
+                if (!rainEnabled) {
+                    clearInterval(createRaindropsInterval);
+                    toggleRainBtn.textContent = 'Start Rain';
+                    rainSound.pause();
+                } else {
+                    createRaindropsInterval = setInterval(createRaindrop, currentIntensity.dropFrequency);
+                    toggleRainBtn.textContent = 'Stop Rain';
+                    if (soundEnabled && initialized) {
+                        rainSound.play().catch(e => console.log('Rain sound failed to play:', e));
+                    }
+                }
+            });
+            
+            // Toggle thunder
+            toggleThunderBtn.addEventListener('click', function() {
+                thunderEnabled = !thunderEnabled;
+                toggleThunderBtn.textContent = thunderEnabled ? 'Stop Thunder' : 'Start Thunder';
+            });
+            
+            // Toggle sound
+            toggleSoundBtn.addEventListener('click', function() {
+                soundEnabled = !soundEnabled;
+                toggleSoundBtn.textContent = soundEnabled ? 'Mute Sound' : 'Unmute Sound';
+                
+                if (soundEnabled && rainEnabled && initialized) {
+                    rainSound.play().catch(e => console.log('Rain sound failed to play:', e));
+                } else {
+                    rainSound.pause();
+                }
+            });
+            
+            // Toggle intensity
+            toggleIntensityBtn.addEventListener('click', function() {
+                highIntensity = !highIntensity;
+                currentIntensity = highIntensity ? intensitySettings.high : intensitySettings.low;
+                
+                // Update raindrop creation interval
+                clearInterval(createRaindropsInterval);
+                if (rainEnabled) {
+                    createRaindropsInterval = setInterval(createRaindrop, currentIntensity.dropFrequency);
+                }
+                
+                toggleIntensityBtn.textContent = highIntensity ? 'Decrease Intensity' : 'Increase Intensity';
+                
+                // Adjust rain sound volume based on intensity
+                if (soundEnabled && rainEnabled) {
+                    rainSound.volume = highIntensity ? 0.7 : 0.5;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
